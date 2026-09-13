@@ -41,11 +41,19 @@ class Settings(BaseSettings):
     daily_query_quota_pro: int = int(os.getenv("DAILY_QUERY_QUOTA_PRO", "1000"))
 
     # CORS: comma-separated list of allowed origins for the Next.js frontend.
-    cors_origins: List[str] = [
-        origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
-        if origin.strip()
-    ]
+    # Kept as a plain str field, not List[str]: pydantic-settings treats any
+    # list-typed field as "complex" and tries to json.loads() the raw env var
+    # before validation ever runs. That's invisible with .env files (an unset
+    # var never reaches the decoder — it just falls back to the Python-level
+    # default), but crashes immediately the moment a real environment
+    # variable is set, e.g. on Render, since "http://localhost:3000" isn't
+    # valid JSON. Splitting it ourselves in a property sidesteps that source
+    # entirely.
+    cors_origins_raw: str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+
+    @property
+    def cors_origins(self) -> List[str]:
+        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
 
     class Config:
         env_file = ".env"
