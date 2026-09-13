@@ -2,7 +2,8 @@ import sqlite3
 import pandas as pd
 import os
 import re
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Generator
+from contextlib import contextmanager
 
 class DatabaseManager:
     """
@@ -13,11 +14,15 @@ class DatabaseManager:
         self.db_path = db_path
         self._initialize_default_data()
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Returns a connection to the SQLite database."""
+    @contextmanager
+    def get_connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Returns a connection to the SQLite database and ensures it closes properly."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _initialize_default_data(self):
         """Preloads Sales_Agent.csv if the database does not have tables yet."""
@@ -42,7 +47,8 @@ class DatabaseManager:
         """
         try:
             # Clean table name
-            clean_table = re.sub(r'[^a-zA-Z0-9_]', '_', table_name.strip()).strip('_')
+            clean_table = re.sub(r'[^a-zA-Z0-9_]', '_', table_name.strip())
+            clean_table = re.sub(r'_+', '_', clean_table).strip('_')
             if not clean_table:
                 clean_table = "custom_data"
 

@@ -1,6 +1,12 @@
 # Environment & Secrets
 .env
 *.env
+.env.local
+.env.*.local
+firebase-service-account*.json
+backend/*serviceAccount*.json
+# Firebase's own default download filename: <project-id>-firebase-adminsdk-<hash>-<random>.json
+*firebase-adminsdk*.json
 
 # Python Cache & Bytecode
 __pycache__/
@@ -17,6 +23,13 @@ ENV/
 *.db
 *.sqlite
 *.sqlite3
+data_store/
+
+# Node / Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+node_modules/
 
 # Streamlit logs & cache
 .streamlit/
@@ -27,3 +40,4 @@ ENV/
 Thumbs.db
 .vscode/
 .idea/
+.claude/

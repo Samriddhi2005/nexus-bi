@@ -13,7 +13,7 @@ class SQLGuardrail:
         r"\bINSERT\b",
         r"\bALTER\b",
         r"\bTRUNCATE\b",
-        r"\bREPLACE\b",
+        r"\bREPLACE\s+INTO\b",
         r"\bCREATE\b",
         r"\bATTACH\b",
         r"\bDETACH\b",
@@ -28,14 +28,20 @@ class SQLGuardrail:
     @classmethod
     def clean_query(cls, sql: str) -> str:
         """Strips markdown code fences, comments, and trailing semicolons."""
-        sql = re.sub(r"^```(?:sql)?\s*", "", sql.strip(), flags=re.IGNORECASE)
-        sql = re.sub(r"\s*```$", "", sql.strip())
+        sql_str = sql.strip()
+        fence_match = re.search(r"```(?:sql)?\s*([\s\S]*?)\s*```", sql_str, flags=re.IGNORECASE)
+        if fence_match:
+            sql_str = fence_match.group(1).strip()
+        else:
+            sql_str = re.sub(r"^```(?:sql)?\s*", "", sql_str, flags=re.IGNORECASE)
+            sql_str = re.sub(r"\s*```$", "", sql_str).strip()
+
         # Remove single-line comments
-        sql = re.sub(r"--.*$", "", sql, flags=re.MULTILINE)
+        sql_str = re.sub(r"--.*$", "", sql_str, flags=re.MULTILINE)
         # Remove multi-line comments
-        sql = re.sub(r"/\*.*?\*/", "", sql, flags=re.DOTALL)
-        sql = sql.strip().rstrip(";")
-        return sql
+        sql_str = re.sub(r"/\*.*?\*/", "", sql_str, flags=re.DOTALL)
+        sql_str = sql_str.strip().rstrip(";").strip()
+        return sql_str
 
     @classmethod
     def validate_query(cls, sql_query: str) -> Tuple[bool, str, str]:
@@ -48,8 +54,10 @@ class SQLGuardrail:
         if not cleaned_sql:
             return False, "Query is empty.", ""
 
-        # Check for multiple stacked queries (e.g. SELECT 1; DROP TABLE ...)
-        if ";" in cleaned_sql:
+        # Check for multiple stacked queries without false-positives on string literals
+        sql_no_literals = re.sub(r"'(?:''|[^'])*'", "''", cleaned_sql)
+        sql_no_literals = re.sub(r'"(?:""|[^"])*"', '""', sql_no_literals)
+        if ";" in sql_no_literals:
             return False, "Stacked queries with semicolons are not allowed for security.", cleaned_sql
 
         # Verify that query begins with SELECT or WITH (Common Table Expressions)

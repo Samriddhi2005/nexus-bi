@@ -79,7 +79,72 @@ graph TD
 
 ---
 
-## 💻 Local Setup & Quickstart
+## 🏢 Production Architecture (Next.js + FastAPI + Firebase)
+
+NexusBI is evolving from the single-file Streamlit demo below into a real multi-user product, while the **agent engine in `core/` stays 100% unchanged** — it's just called from a REST API now instead of a Streamlit script.
+
+```
+Next.js (frontend/)  --Firebase ID token-->  FastAPI (backend/)  -->  core/ (unchanged engine)
+      |                                            |                        |
+Firebase Auth (client SDK)              Firebase Admin SDK (verify)   data_store/<uid>/nexus_bi.db
+      |                                            |
+      +-------------------> Firestore <------------+  (users, sessions, messages, datasets, audit_logs)
+```
+
+* **`backend/`** — FastAPI service. Verifies Firebase ID tokens, isolates each user's data in `data_store/<uid>/nexus_bi.db`, persists chat history + datasets in Firestore, enforces daily query quotas, writes a security audit log of every SQL query + guardrail verdict, and exposes admin-only analytics endpoints.
+* **`frontend/`** — Next.js (TypeScript, App Router, Tailwind) app: Firebase email/Google sign-in, a chat UI with feature parity to the Streamlit app (thought trace, insights/chart/raw-data/SQL tabs, CSV export), and an `/admin` portal (usage overview, user management, audit log).
+* **`app.py`** (Streamlit) is kept as-is as a legacy fallback during the transition.
+
+### Setup
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com): enable **Authentication** (Email/Password + Google) and **Firestore** (Native mode).
+2. Generate a service account key (Project Settings → Service Accounts) and point the backend at it:
+   ```ini
+   # backend/.env (or repo-root .env)
+   FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/serviceAccountKey.json
+   GROQ_API_KEY=gsk_...            # server-managed LLM key (product no longer asks users for one)
+   ```
+3. Copy the Firebase **web app config** into `frontend/.env.local` (see `frontend/.env.local.example`).
+4. Install & run the backend:
+   ```bash
+   pip install -r requirements.txt -r requirements-backend.txt
+   uvicorn backend.main:app --reload
+   ```
+5. Install & run the frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+6. Sign up a user through the app, then manually flip that user's `role` field to `"admin"` in the Firestore `users/{uid}` document to unlock `/admin`.
+
+Run `python -m unittest backend.tests.test_chat` for the backend's API-layer tests (auth, quota, guardrail-block auditing, admin gating, per-user data isolation, Cloud Storage durability), and `python -m unittest discover -s tests` for the original engine tests — both stay green independently, proving the agent workflow itself was never touched.
+
+### Deploying: backend on Render, frontend on Vercel
+
+Per-user datasets live at `data_store/<uid>/nexus_bi.db` on local disk, which most hosts (Render included) don't guarantee survives a redeploy or restart. To make that durable, each user's SQLite file is also synced to a **Firebase Cloud Storage** bucket (`backend/storage_client.py`) — downloaded to local disk on first access if missing, re-uploaded after any dataset upload/delete. This is a durability layer *underneath* SQLite, not a replacement for it: `core/database.py` still owns all SQL logic and has no idea Cloud Storage exists.
+
+**Backend → Render**
+
+1. In the Firebase Console, enable **Storage** if you haven't already, and copy the bucket name (Project Settings → General → Your apps, or the Storage page) — it's the same value as `frontend/.env.local`'s `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`.
+2. Push this repo to GitHub, then create a new **Blueprint** on [render.com](https://render.com) pointing at it — it picks up `render.yaml` automatically.
+3. In the Render dashboard, fill in the env vars marked `sync: false` in `render.yaml`:
+   - `GROQ_API_KEY`
+   - `FIREBASE_SERVICE_ACCOUNT_JSON` — paste the **entire contents** of your service account JSON file as one value (not `FIREBASE_SERVICE_ACCOUNT_PATH`: Render's disk is ephemeral, so a file written at build time won't reliably be there later)
+   - `FIREBASE_STORAGE_BUCKET`
+   - `CORS_ORIGINS` — set this once you have your Vercel URL (step below), e.g. `https://your-app.vercel.app`
+4. Deploy. Note the resulting Render URL (e.g. `https://nexusbi-backend.onrender.com`).
+
+**Frontend → Vercel**
+
+1. Import the repo on [vercel.com](https://vercel.com), setting the project root to `frontend/` (Next.js is auto-detected).
+2. Add the same six `NEXT_PUBLIC_FIREBASE_*` env vars as your local `frontend/.env.local`, plus `NEXT_PUBLIC_API_BASE_URL` set to your Render backend's URL from above.
+3. Deploy, then go back to Render and set `CORS_ORIGINS` to the Vercel URL you were just given, and redeploy the backend.
+4. **Required manual step** — in the Firebase Console, go to Authentication → Settings → **Authorized domains** and add your Vercel domain. Without this, sign-in fails on the deployed site even though it works locally.
+
+---
+
+## 💻 Local Setup & Quickstart (Legacy Streamlit App)
 
 ### 1. Clone the Repository
 ```bash

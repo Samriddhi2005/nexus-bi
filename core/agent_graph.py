@@ -218,9 +218,13 @@ Requirements:
                 HumanMessage(content=chart_prompt)
             ])
             raw_chart = chart_resp.content.strip()
-            # Clean markdown fences
-            clean_chart = re.sub(r"^```(?:python)?\s*", "", raw_chart, flags=re.IGNORECASE)
-            clean_chart = re.sub(r"\s*```$", "", clean_chart).strip()
+            # Clean markdown fences reliably
+            fence_match = re.search(r"```(?:python)?\s*([\s\S]*?)\s*```", raw_chart, flags=re.IGNORECASE)
+            if fence_match:
+                clean_chart = fence_match.group(1).strip()
+            else:
+                clean_chart = re.sub(r"^```(?:python)?\s*", "", raw_chart, flags=re.IGNORECASE)
+                clean_chart = re.sub(r"\s*```$", "", clean_chart).strip()
             chart_code = clean_chart
 
         return {

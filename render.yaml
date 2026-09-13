@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: nexusbi-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt -r requirements-backend.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Set actual values in the Render dashboard — nothing secret is committed here.
+      - key: GROQ_API_KEY
+        sync: false
+      # Use the inline-JSON form, not FIREBASE_SERVICE_ACCOUNT_PATH: Render's
+      # disk is ephemeral, so a service account file written at build time
+      # won't reliably be there on every deploy/restart.
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DEFAULT_LLM_PROVIDER
+        value: groq
+      - key: DEFAULT_LLM_MODEL
+        value: openai/gpt-oss-120b

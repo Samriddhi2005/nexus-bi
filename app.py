@@ -5,10 +5,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import time
 import os
+import io
 
 from core.database import DatabaseManager
 from core.llm_factory import LLMFactory
 from core.agent_graph import run_bi_workflow
+from core.visualizer import render_plotly_safely
 
 # -------------------------------------------------------------
 # Streamlit Page Config & Custom Styling
@@ -228,7 +230,7 @@ st.write("")
 # -------------------------------------------------------------
 # Display Chat History
 # -------------------------------------------------------------
-for msg in st.session_state.messages:
+for idx, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         if msg["role"] == "user":
             st.markdown(f"**{msg['content']}**")
@@ -257,10 +259,8 @@ for msg in st.session_state.messages:
                 sql_df_json = res.get("sql_df_json")
                 if chart_code and sql_df_json:
                     try:
-                        df = pd.read_json(sql_df_json, orient="split")
-                        local_scope = {"pd": pd, "px": px, "go": go, "df": df}
-                        exec(chart_code, {}, local_scope)
-                        fig = local_scope.get("fig")
+                        df = pd.read_json(io.StringIO(sql_df_json), orient="split")
+                        fig = render_plotly_safely(chart_code, df)
                         if fig:
                             st.plotly_chart(fig, use_container_width=True)
                         else:
@@ -273,7 +273,7 @@ for msg in st.session_state.messages:
             with tab3:
                 sql_df_json = res.get("sql_df_json")
                 if sql_df_json:
-                    df = pd.read_json(sql_df_json, orient="split")
+                    df = pd.read_json(io.StringIO(sql_df_json), orient="split")
                     st.dataframe(df, use_container_width=True)
                     csv_data = df.to_csv(index=False).encode('utf-8')
                     st.download_button(
@@ -281,7 +281,7 @@ for msg in st.session_state.messages:
                         data=csv_data,
                         file_name="nexus_bi_result.csv",
                         mime="text/csv",
-                        key=f"dl_{time.time()}"
+                        key=f"dl_hist_{idx}"
                     )
                 else:
                     st.write("No tabular data returned.")
@@ -355,10 +355,8 @@ if query_to_run:
                 sql_df_json = final_state.get("sql_df_json")
                 if chart_code and sql_df_json:
                     try:
-                        df = pd.read_json(sql_df_json, orient="split")
-                        local_scope = {"pd": pd, "px": px, "go": go, "df": df}
-                        exec(chart_code, {}, local_scope)
-                        fig = local_scope.get("fig")
+                        df = pd.read_json(io.StringIO(sql_df_json), orient="split")
+                        fig = render_plotly_safely(chart_code, df)
                         if fig:
                             st.plotly_chart(fig, use_container_width=True)
                         else:
@@ -371,7 +369,7 @@ if query_to_run:
             with tab3:
                 sql_df_json = final_state.get("sql_df_json")
                 if sql_df_json:
-                    df = pd.read_json(sql_df_json, orient="split")
+                    df = pd.read_json(io.StringIO(sql_df_json), orient="split")
                     st.dataframe(df, use_container_width=True)
                     csv_data = df.to_csv(index=False).encode('utf-8')
                     st.download_button(
@@ -379,7 +377,7 @@ if query_to_run:
                         data=csv_data,
                         file_name="nexus_bi_result.csv",
                         mime="text/csv",
-                        key=f"dl_live_{time.time()}"
+                        key=f"dl_live_{len(st.session_state.messages)}"
                     )
                 else:
                     st.write("No tabular data returned.")

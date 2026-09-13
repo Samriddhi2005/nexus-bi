@@ -1,0 +1,361 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Shared design tokens — one palette for the whole site (landing, app,
+   admin), not just the landing page. Colour is semantic: --agent is the
+   machine speaking (agents, SQL, working state), --answer is a human
+   receiving a delivered result, --blocked is the system catching something
+   (a guardrail block or an error). Kept identical to what the landing page
+   already established and validated, rather than inventing a second palette
+   for the product itself.
+   ========================================================================== */
+:root {
+  --ink: #070b14;
+  --ink-raise: #0c1220;
+  --rule: #1a2333;
+  --agent: #5b8cff;
+  --answer: #f5b23d;
+  --blocked: #ff5c5c;
+  --paper: #e6ebf4;
+  --muted: #79879f;
+
+  --background: var(--ink);
+  --foreground: var(--paper);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.glass-panel {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ink-raise) 75%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 75%, transparent) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--agent) 20%, transparent);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Kept for admin pages that still reference it; new chat/sidebar UI uses the
+   plain agent-dot wordmark instead (see landing's Nav.tsx) — a gradient
+   wordmark is the single most templated AI-SaaS treatment there is, and the
+   rest of the product deliberately avoids it. */
+.gradient-text {
+  background: linear-gradient(90deg, #60a5fa, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sidebar-gradient {
+  background: linear-gradient(180deg, var(--ink-raise) 0%, var(--ink) 100%);
+  border-right: 1px solid var(--rule);
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-safe {
+  background: color-mix(in srgb, var(--agent) 15%, transparent);
+  color: var(--agent);
+  border: 1px solid color-mix(in srgb, var(--agent) 35%, transparent);
+}
+
+.badge-blocked {
+  background: color-mix(in srgb, var(--blocked) 15%, transparent);
+  color: var(--blocked);
+  border: 1px solid color-mix(in srgb, var(--blocked) 35%, transparent);
+}
+
+.badge-agent {
+  background: color-mix(in srgb, var(--agent) 15%, transparent);
+  color: var(--agent);
+  border: 1px solid color-mix(in srgb, var(--agent) 35%, transparent);
+}
+
+.thought-item {
+  padding: 8px 12px;
+  border-left: 3px solid var(--agent);
+  background: var(--ink-raise);
+  margin-bottom: 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ==========================================================================
+   Landing page
+   Tokens now live at :root (shared with the whole app); .landing just
+   marks the machine/human type pairing and background for this surface.
+   ========================================================================== */
+
+.landing {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-human), system-ui, sans-serif;
+}
+
+/* --- Type roles --------------------------------------------------------- */
+
+.l-machine {
+  font-family: var(--font-machine), ui-monospace, monospace;
+}
+
+.l-display {
+  font-family: var(--font-machine), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: clamp(2.25rem, 6.2vw, 5rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+.l-ask {
+  font-family: var(--font-human), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(1.75rem, 4.6vw, 3.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.l-h2 {
+  font-family: var(--font-human), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(1.75rem, 3.6vw, 2.85rem);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+}
+
+.l-eyebrow {
+  font-family: var(--font-machine), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.l-body {
+  font-size: clamp(0.975rem, 1.15vw, 1.075rem);
+  line-height: 1.62;
+  color: var(--muted);
+}
+
+/* --- Surfaces ----------------------------------------------------------- */
+
+.l-hairline {
+  border: 1px solid var(--rule);
+}
+
+.l-raise {
+  background: var(--ink-raise);
+  border: 1px solid var(--rule);
+}
+
+/* The background data plane: real Sales_Agent values on a ruled grid. */
+.l-gridlines {
+  background-image:
+    linear-gradient(to right, var(--rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+  background-size: 132px 56px;
+  opacity: 0.4;
+}
+
+/* --- Motion ------------------------------------------------------------- */
+
+@keyframes l-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Standalone so it can sit between the typed text and the not-yet-typed
+   remainder, which stays in the DOM (transparent) to hold layout and keep the
+   full string available to crawlers and screen readers. */
+.l-caret-inline {
+  display: inline-block;
+  width: 0.5ch;
+  height: 1em;
+  margin-inline: 0.06em;
+  translate: 0 0.14em;
+  background: var(--agent);
+  animation: l-caret 1.05s step-end infinite;
+}
+
+@keyframes l-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.l-rise {
+  animation: l-rise 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes l-stamp {
+  0% { opacity: 0; transform: scale(1.14); }
+  60% { opacity: 1; transform: scale(0.985); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.l-stamp {
+  animation: l-stamp 0.44s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+/* Stamp-in once, then drift forever after. A single declaration on purpose:
+   stacking .l-stamp and .l-float-idle as separate classes would have one
+   `animation` shorthand silently replace the other instead of combining. */
+.l-stamp-float {
+  animation:
+    l-stamp 0.44s cubic-bezier(0.2, 1.3, 0.4, 1) both,
+    l-float-idle 5.5s ease-in-out 0.44s infinite;
+}
+
+/* Entrance reveals, driven by IntersectionObserver adding [data-shown]. */
+.l-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.l-reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes l-drift-a {
+  0%, 100% { transform: translate(-6%, -4%) scale(1); }
+  50% { transform: translate(4%, 6%) scale(1.12); }
+}
+
+@keyframes l-drift-b {
+  0%, 100% { transform: translate(5%, 3%) scale(1); }
+  50% { transform: translate(-4%, -6%) scale(1.08); }
+}
+
+/* Large, slow, blurred colour fields — the only continuous ambient motion
+   besides the node canvas. Kept to the two semantic hues so it reads as
+   depth, not decoration. */
+.l-orb-agent {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, var(--agent), transparent 70%);
+  opacity: 0.16;
+  filter: blur(60px);
+  animation: l-drift-a 22s ease-in-out infinite;
+}
+
+.l-orb-answer {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, var(--answer), transparent 70%);
+  opacity: 0.1;
+  filter: blur(70px);
+  animation: l-drift-b 26s ease-in-out infinite;
+}
+
+@keyframes l-pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--agent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.l-pulse-dot {
+  animation: l-pulse-dot 1.8s ease-out infinite;
+}
+
+@keyframes l-node-live {
+  0%, 100% { filter: drop-shadow(0 0 0px currentColor); }
+  50% { filter: drop-shadow(0 0 6px currentColor); }
+}
+
+.l-node-live {
+  animation: l-node-live 1.4s ease-in-out infinite;
+}
+
+.l-glow-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease, opacity 0.2s ease;
+}
+
+.l-glow-hover:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--agent) 40%, transparent),
+    0 0 24px -4px var(--agent);
+  transform: translateY(-1px);
+}
+
+/* Borrowed from the "antigravity" idea directly: small elements drift as if
+   weightless, each on its own phase so a group never moves in lockstep. */
+@keyframes l-float-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.l-float-idle {
+  animation: l-float-idle 5.5s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* Magnetic tilt: JS sets the rotation via inline transform on pointermove;
+   this just supplies the spring-back easing when the pointer leaves. */
+.l-tilt {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* --- Quality floor ------------------------------------------------------ */
+
+/* Site-wide, not just the landing page — the app (chat, admin) shares this
+   palette now too, and keyboard focus needs to stay visible everywhere. */
+:focus-visible {
+  outline: 2px solid var(--agent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  /* Every sequence resolves to its finished, readable state. */
+  .l-reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .l-caret-inline {
+    display: none;
+  }
+}
